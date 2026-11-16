@@ -10,9 +10,10 @@ import tempfile
 
 SEVERITY = {"ERROR": "high", "WARNING": "medium", "INFO": "low", "HIGH": "high", "MEDIUM": "medium", "LOW": "low"}
 
-def limits():
+def limits(virtual_memory=True):
     resource.setrlimit(resource.RLIMIT_CPU, (100, 100))
-    resource.setrlimit(resource.RLIMIT_AS, (3_000_000_000, 3_000_000_000))
+    if virtual_memory:
+        resource.setrlimit(resource.RLIMIT_AS, (3_000_000_000, 3_000_000_000))
     resource.setrlimit(resource.RLIMIT_FSIZE, (8_000_000, 8_000_000))
     resource.setrlimit(resource.RLIMIT_NOFILE, (128, 128))
 
@@ -22,7 +23,7 @@ def run_json(command: list[str], cwd: Path, accepted=(0, 1)) -> dict:
         env = {key: value for key, value in os.environ.items() if key in {"PATH", "LD_LIBRARY_PATH", "SSL_CERT_FILE", "SSL_CERT_DIR", "REQUESTS_CA_BUNDLE", "NODE_EXTRA_CA_CERTS", "HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY"}}
         env["HOME"] = scanner_home
         env["SEMGREP_SEND_METRICS"] = "off"
-        process = subprocess.Popen(command, cwd=cwd, stdout=stdout, stderr=stderr, env=env, preexec_fn=limits, start_new_session=True)
+        process = subprocess.Popen(command, cwd=cwd, stdout=stdout, stderr=stderr, env=env, preexec_fn=lambda: limits(virtual_memory=command[0] != "semgrep"), start_new_session=True)
         try:
             code = process.wait(timeout=120)
         except subprocess.TimeoutExpired:
@@ -66,7 +67,7 @@ def scan(root: Path, rules: Path) -> tuple[list[dict], list[dict]]:
             raise RuntimeError("Incomplete Bandit scan")
         return [finding("bandit", item["test_id"], item["issue_severity"].lower(), safe_path(item["filename"], root), item["line_number"], {"B307": "Dynamic code evaluation", "B602": "Shell command injection risk", "B105": "Embedded credential candidate", "B101": "Assertions used in application code", "B404": "Subprocess module requires review"}.get(item["test_id"], item["test_name"].replace("_", " ").capitalize()), "Review the flagged security pattern and replace it with a safer API. Add a regression test before accepting a change.") for item in data.get("results", [])]
     def semgrep():
-        data = run_json(["semgrep", "scan", "--jobs", "1", "--config", str(rules), "--json", "--metrics=off", "--disable-version-check", "--no-git-ignore", str(root)], root)
+        data = run_json(["semgrep", "scan", "--jobs", "1", "--max-memory", "1024", "--timeout", "30", "--config", str(rules), "--json", "--metrics=off", "--disable-version-check", "--no-git-ignore", str(root)], root)
         if data.get("errors"):
             raise RuntimeError("Incomplete Semgrep scan")
         return [finding("semgrep", item["check_id"].split(".")[-1], SEVERITY.get(item["extra"]["severity"], "medium"), safe_path(item["path"], root), item["start"]["line"], "Unsafe code or credential pattern", "Remove embedded credentials, rotate any real credential, and use managed configuration. Review the rule for other patterns.") for item in data.get("results", [])]
