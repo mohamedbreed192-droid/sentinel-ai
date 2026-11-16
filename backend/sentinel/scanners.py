@@ -82,6 +82,8 @@ def scan(root: Path, rules: Path) -> tuple[list[dict], list[dict]]:
             work = Path(directory)
             (work / "requirements.txt").write_text("\n".join(item[0] for item in requirements))
             data = run_json(["pip-audit", "-r", "requirements.txt", "--no-deps", "--disable-pip", "--progress-spinner", "off", "-f", "json"], work)
+        if any(item.get("skip_reason") for item in data.get("dependencies", [])):
+            raise RuntimeError("Some dependency versions could not be audited")
         items = []
         for dependency in data.get("dependencies", []):
             for vuln in dependency.get("vulns", []):

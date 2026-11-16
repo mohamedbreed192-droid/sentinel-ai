@@ -1,12 +1,23 @@
 rules:
   - id: embedded-credential
-    languages: [python, javascript, typescript]
+    languages: [python]
+    severity: ERROR
+    message: Embedded credential requires review.
+    patterns:
+      - pattern: $KEY = "..."
+      - metavariable-regex:
+          metavariable: $KEY
+          regex: (?i).*(password|secret|api_key|token)$
+  - id: embedded-credential-js
+    languages: [javascript, typescript]
     severity: ERROR
     message: Embedded credential requires review.
     patterns:
       - pattern-either:
           - pattern: $KEY = "..."
           - pattern: const $KEY = "..."
+          - pattern: let $KEY = "..."
+          - pattern: var $KEY = "..."
       - metavariable-regex:
           metavariable: $KEY
           regex: (?i).*(password|secret|api_key|token)$

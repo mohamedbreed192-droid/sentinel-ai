@@ -10,7 +10,7 @@ def test_real_scanners_and_secret_redaction():
     report=analyze_directory(FIXTURE,{"name":"sentinel/demo"},demo=True)
     statuses={item["scanner"]:item["status"] for item in report["coverage"]}
     assert statuses["bandit"]=="completed"
-    assert statuses["semgrep"]=="completed", report["coverage"]
+    assert statuses["semgrep"]=="completed", next(item for item in report["coverage"] if item["scanner"]=="semgrep")
     assert any(item["rule"]=="B307" for item in report["findings"])
     assert any(item["rule"]=="embedded-credential" for item in report["findings"])
     assert "SENTINEL_SYNTHETIC_CREDENTIAL_DO_NOT_USE" not in json.dumps(report)
@@ -73,3 +73,25 @@ def test_dependency_adapters_keep_installers_disabled(tmp_path,monkeypatch):
     assert all(item["status"] in {"completed","not_applicable"} for item in coverage)
     pip=next(command for command in commands if command[0]=="pip-audit")
     assert "--no-deps" in pip and "--disable-pip" in pip
+
+
+def test_skipped_dependency_is_partial_coverage(tmp_path,monkeypatch):
+    from sentinel import scanners
+    (tmp_path/"requirements.txt").write_text("unknown-package==0.0.0\n")
+    monkeypatch.setattr(scanners.shutil,"which",lambda name:name)
+    def fake(command,cwd,accepted=(0,1)):
+        if command[0]=="pip-audit":
+            return {"dependencies":[{"name":"unknown-package","skip_reason":"Not found"}]}
+        return {"results":[]}
+    monkeypatch.setattr(scanners,"run_json",fake)
+    findings,coverage=scanners.scan(tmp_path,Path("rules.yml"))
+    status=next(item for item in coverage if item["scanner"]=="pip-audit")
+    assert status["status"]=="failed" and status["count"]==0
+
+
+def test_real_typescript_credential_rule(tmp_path):
+    (tmp_path/"config.ts").write_text('const API_TOKEN = "SYNTHETIC_JS_VALUE";\n')
+    report=analyze_directory(tmp_path,{"name":"fixture/js"})
+    assert next(item for item in report["coverage"] if item["scanner"]=="semgrep")["status"]=="completed"
+    assert any(item["rule"]=="embedded-credential-js" for item in report["findings"])
+    assert "SYNTHETIC_JS_VALUE" not in json.dumps(report)
