@@ -13,6 +13,21 @@ jobs:
       - name: Import, graph, scanner, redaction, persistence and API checks
         working-directory: backend
         run: PYTHONPATH=. pytest -q
+      - name: Semgrep portability diagnostics
+        if: failure()
+        run: |
+          semgrep scan --config backend/sentinel/rules.yml --json --metrics=off --disable-version-check fixtures/demo > semgrep-diagnostic.json 2> semgrep-diagnostic.log || true
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          text=Path('semgrep-diagnostic.log').read_text().replace('SENTINEL_SYNTHETIC_CREDENTIAL_DO_NOT_USE','[REDACTED]')
+          print(text[-4000:])
+          try:
+              data=json.loads(Path('semgrep-diagnostic.json').read_text())
+              print('Scanner errors:', data.get('errors', []))
+          except ValueError:
+              print('No JSON output')
+          PY
       - name: Migration smoke check
         working-directory: backend
         run: alembic upgrade head
@@ -53,6 +68,9 @@ jobs:
           Path('.env').write_text('POSTGRES_PASSWORD='+password+'\nDATABASE_URL=postgresql+psycopg://sentinel:'+password+'@postgres:5432/sentinel\nREDIS_URL=redis://redis:6379/0\nAPI_TOKEN='+secrets.token_hex(24)+'\n')
           PY
       - run: docker compose up --build -d
+      - name: Container startup diagnostics
+        if: failure()
+        run: docker compose logs --tail=60 migrate api worker
       - name: API readiness and PostgreSQL migration
         run: |
           for attempt in $(seq 1 30); do

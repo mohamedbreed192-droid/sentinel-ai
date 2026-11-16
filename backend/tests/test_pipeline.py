@@ -10,7 +10,7 @@ def test_real_scanners_and_secret_redaction():
     report=analyze_directory(FIXTURE,{"name":"sentinel/demo"},demo=True)
     statuses={item["scanner"]:item["status"] for item in report["coverage"]}
     assert statuses["bandit"]=="completed"
-    assert statuses["semgrep"]=="completed"
+    assert statuses["semgrep"]=="completed", report["coverage"]
     assert any(item["rule"]=="B307" for item in report["findings"])
     assert any(item["rule"]=="embedded-credential" for item in report["findings"])
     assert "SENTINEL_SYNTHETIC_CREDENTIAL_DO_NOT_USE" not in json.dumps(report)

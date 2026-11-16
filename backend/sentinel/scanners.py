@@ -19,7 +19,7 @@ def limits():
 def run_json(command: list[str], cwd: Path, accepted=(0, 1)) -> dict:
     # stdout/stderr are bounded files; raw scanner output never reaches reports/logs.
     with tempfile.TemporaryDirectory(prefix="scanner-home-") as scanner_home, tempfile.TemporaryFile() as stdout, tempfile.TemporaryFile() as stderr:
-        env = {key: value for key, value in os.environ.items() if key in {"PATH", "SSL_CERT_FILE", "SSL_CERT_DIR", "REQUESTS_CA_BUNDLE", "NODE_EXTRA_CA_CERTS", "HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY"}}
+        env = {key: value for key, value in os.environ.items() if key in {"PATH", "LD_LIBRARY_PATH", "SSL_CERT_FILE", "SSL_CERT_DIR", "REQUESTS_CA_BUNDLE", "NODE_EXTRA_CA_CERTS", "HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY"}}
         env["HOME"] = scanner_home
         env["SEMGREP_SEND_METRICS"] = "off"
         process = subprocess.Popen(command, cwd=cwd, stdout=stdout, stderr=stderr, env=env, preexec_fn=limits, start_new_session=True)
@@ -31,7 +31,7 @@ def run_json(command: list[str], cwd: Path, accepted=(0, 1)) -> dict:
             process.wait()
             raise RuntimeError("Scanner timed out") from None
         if code not in accepted:
-            raise RuntimeError("Scanner failed")
+            raise RuntimeError(f"Scanner exited with code {code}")
         stdout.seek(0)
         return json.loads(stdout.read(8_000_001))
 
@@ -58,8 +58,8 @@ def scan(root: Path, rules: Path) -> tuple[list[dict], list[dict]]:
             items = function()
             findings.extend(items)
             coverage.append({"scanner": name, "status": "completed", "count": len(items)})
-        except (RuntimeError, ValueError, OSError, KeyError, TypeError):
-            coverage.append({"scanner": name, "status": "failed", "count": 0})
+        except (RuntimeError, ValueError, OSError, KeyError, TypeError) as error:
+            coverage.append({"scanner": name, "status": "failed", "count": 0, "reason": str(error) if isinstance(error, RuntimeError) else type(error).__name__})
     def bandit():
         data = run_json(["bandit", "-r", str(root), "-f", "json", "-q"], root)
         if data.get("errors"):
