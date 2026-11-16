@@ -16,6 +16,7 @@ jobs:
       - name: Semgrep portability diagnostics
         if: failure()
         run: |
+          PYTHONPATH=backend python scripts/diagnose_fixture_scanner.py
           semgrep scan --config backend/sentinel/rules.yml --json --metrics=off --disable-version-check fixtures/demo > semgrep-diagnostic.json 2> semgrep-diagnostic.log || true
           python - <<'PY'
           import json
