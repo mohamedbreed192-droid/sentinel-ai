@@ -1,0 +1,231 @@
+{
+  "repository": {
+    "name": "sentinel-labs/reliability-demo",
+    "url": "https://github.com/example/synthetic-fixture",
+    "description": "Intentionally vulnerable synthetic fixture"
+  },
+  "demo": true,
+  "completed_at": "2026-11-16T12:46:47.400589+00:00",
+  "findings": [
+    {
+      "id": "semgrep:embedded-credential:config.py:2",
+      "scanner": "semgrep",
+      "rule": "embedded-credential",
+      "severity": "high",
+      "file": "config.py",
+      "line": 2,
+      "title": "Unsafe code or credential pattern",
+      "evidence": "Rule embedded-credential matched at this location. Source values withheld.",
+      "remediation": "Remove embedded credentials, rotate any real credential, and use managed configuration. Review the rule for other patterns.",
+      "state": "open",
+      "affected": [
+        "app.py",
+        "config.py",
+        "service.py"
+      ],
+      "proposed_patch": null
+    },
+    {
+      "id": "bandit:B602:service.py:8",
+      "scanner": "bandit",
+      "rule": "B602",
+      "severity": "high",
+      "file": "service.py",
+      "line": 8,
+      "title": "Shell command injection risk",
+      "evidence": "Rule B602 matched at this location. Source values withheld.",
+      "remediation": "Review the flagged security pattern and replace it with a safer API. Add a regression test before accepting a change.",
+      "state": "open",
+      "affected": [
+        "app.py",
+        "service.py"
+      ],
+      "proposed_patch": null
+    },
+    {
+      "id": "semgrep:python-eval:service.py:5",
+      "scanner": "semgrep",
+      "rule": "python-eval",
+      "severity": "high",
+      "file": "service.py",
+      "line": 5,
+      "title": "Unsafe code or credential pattern",
+      "evidence": "Rule python-eval matched at this location. Source values withheld.",
+      "remediation": "Remove embedded credentials, rotate any real credential, and use managed configuration. Review the rule for other patterns.",
+      "state": "open",
+      "affected": [
+        "app.py",
+        "service.py"
+      ],
+      "proposed_patch": {
+        "test_code": "import pytest\nfrom service import evaluate\n\ndef test_bounded_literal_input():\n    assert evaluate('[1, 2]') == [1, 2]\n\ndef test_function_call_is_rejected():\n    with pytest.raises((ValueError, SyntaxError)):\n        evaluate(\"__import__('os').getcwd()\")\n",
+        "diff": "--- a/service.py\n+++ b/service.py\n@@ -0,0 +1 @@\n+import ast\n@@ -5 +6 @@\n-    return eval(value)\n+    return ast.literal_eval(value)\n",
+        "verified": false,
+        "tradeoffs": "Only appropriate for Python literal parsing. Reject oversized input and catch parse errors. This changes expression semantics; review requirements and run regression tests.",
+        "tests": [
+          "Accept bounded supported literals",
+          "Reject function calls and attribute access",
+          "Reject oversized and malformed input"
+        ]
+      }
+    },
+    {
+      "id": "bandit:B307:service.py:5",
+      "scanner": "bandit",
+      "rule": "B307",
+      "severity": "medium",
+      "file": "service.py",
+      "line": 5,
+      "title": "Dynamic code evaluation",
+      "evidence": "Rule B307 matched at this location. Source values withheld.",
+      "remediation": "Review the flagged security pattern and replace it with a safer API. Add a regression test before accepting a change.",
+      "state": "open",
+      "affected": [
+        "app.py",
+        "service.py"
+      ],
+      "proposed_patch": {
+        "test_code": "import pytest\nfrom service import evaluate\n\ndef test_bounded_literal_input():\n    assert evaluate('[1, 2]') == [1, 2]\n\ndef test_function_call_is_rejected():\n    with pytest.raises((ValueError, SyntaxError)):\n        evaluate(\"__import__('os').getcwd()\")\n",
+        "diff": "--- a/service.py\n+++ b/service.py\n@@ -0,0 +1 @@\n+import ast\n@@ -5 +6 @@\n-    return eval(value)\n+    return ast.literal_eval(value)\n",
+        "verified": false,
+        "tradeoffs": "Only appropriate for Python literal parsing. Reject oversized input and catch parse errors. This changes expression semantics; review requirements and run regression tests.",
+        "tests": [
+          "Accept bounded supported literals",
+          "Reject function calls and attribute access",
+          "Reject oversized and malformed input"
+        ]
+      }
+    },
+    {
+      "id": "bandit:B105:config.py:2",
+      "scanner": "bandit",
+      "rule": "B105",
+      "severity": "low",
+      "file": "config.py",
+      "line": 2,
+      "title": "Embedded credential candidate",
+      "evidence": "Rule B105 matched at this location. Source values withheld.",
+      "remediation": "Review the flagged security pattern and replace it with a safer API. Add a regression test before accepting a change.",
+      "state": "open",
+      "affected": [
+        "app.py",
+        "config.py",
+        "service.py"
+      ],
+      "proposed_patch": null
+    },
+    {
+      "id": "bandit:B404:service.py:1",
+      "scanner": "bandit",
+      "rule": "B404",
+      "severity": "low",
+      "file": "service.py",
+      "line": 1,
+      "title": "Subprocess module requires review",
+      "evidence": "Rule B404 matched at this location. Source values withheld.",
+      "remediation": "Review the flagged security pattern and replace it with a safer API. Add a regression test before accepting a change.",
+      "state": "open",
+      "affected": [
+        "app.py",
+        "service.py"
+      ],
+      "proposed_patch": null
+    },
+    {
+      "id": "bandit:B101:test_service.py:3",
+      "scanner": "bandit",
+      "rule": "B101",
+      "severity": "low",
+      "file": "test_service.py",
+      "line": 3,
+      "title": "Assertions used in application code",
+      "evidence": "Rule B101 matched at this location. Source values withheld.",
+      "remediation": "Review the flagged security pattern and replace it with a safer API. Add a regression test before accepting a change.",
+      "state": "open",
+      "affected": [
+        "test_service.py"
+      ],
+      "proposed_patch": null
+    }
+  ],
+  "coverage": [
+    {
+      "scanner": "bandit",
+      "status": "completed",
+      "count": 5
+    },
+    {
+      "scanner": "semgrep",
+      "status": "completed",
+      "count": 2
+    },
+    {
+      "scanner": "pip-audit",
+      "status": "not_applicable",
+      "count": 0
+    },
+    {
+      "scanner": "npm",
+      "status": "not_applicable",
+      "count": 0
+    }
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "id": "app.py",
+        "label": "app.py",
+        "findings": []
+      },
+      {
+        "id": "config.py",
+        "label": "config.py",
+        "findings": [
+          "semgrep:embedded-credential:config.py:2",
+          "bandit:B105:config.py:2"
+        ]
+      },
+      {
+        "id": "service.py",
+        "label": "service.py",
+        "findings": [
+          "bandit:B602:service.py:8",
+          "semgrep:python-eval:service.py:5",
+          "bandit:B307:service.py:5",
+          "bandit:B404:service.py:1"
+        ]
+      },
+      {
+        "id": "test_service.py",
+        "label": "test_service.py",
+        "findings": [
+          "bandit:B101:test_service.py:3"
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "source": "app.py",
+        "target": "service.py"
+      },
+      {
+        "source": "service.py",
+        "target": "config.py"
+      }
+    ],
+    "languages": {
+      "Python": 4
+    },
+    "files": 4,
+    "source_files": 4,
+    "test_frameworks": [
+      "pytest"
+    ],
+    "manifests": [],
+    "summary": "4 source modules across 1 languages; 2 resolved local import relationships. Dynamic imports and runtime service calls are not modeled."
+  },
+  "risk_score": 44,
+  "coverage_complete": true,
+  "test_execution": "disabled",
+  "recommendations": "Deterministic guidance. All proposed changes require review and independent tests. No fixes applied."
+}

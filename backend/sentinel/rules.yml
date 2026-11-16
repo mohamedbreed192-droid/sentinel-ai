@@ -1,0 +1,22 @@
+rules:
+  - id: embedded-credential
+    languages: [python, javascript, typescript]
+    severity: ERROR
+    message: Embedded credential requires review.
+    patterns:
+      - pattern-either:
+          - pattern: $KEY = "..."
+          - pattern: const $KEY = "..."
+      - metavariable-regex:
+          metavariable: $KEY
+          regex: (?i).*(password|secret|api_key|token)$
+  - id: python-eval
+    languages: [python]
+    severity: ERROR
+    message: Dynamic evaluation of input requires review.
+    pattern: eval(...)
+  - id: unsafe-yaml
+    languages: [python]
+    severity: WARNING
+    message: Prefer safe_load for untrusted YAML.
+    pattern: yaml.load(...)
